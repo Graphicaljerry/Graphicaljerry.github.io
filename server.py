@@ -87,11 +87,19 @@ class PhotoAnalyzerHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(json.loads(response_data), 200)
             except urllib.error.HTTPError as e:
                 error_data = e.read().decode('utf-8')
-                self.send_json_response(json.loads(error_data), e.code)
+                print(f"❌ OpenAI API Error: {error_data}")
+                try:
+                    self.send_json_response(json.loads(error_data), e.code)
+                except:
+                    self.send_json_response({'error': error_data}, e.code)
             except urllib.error.URLError as e:
+                print(f"❌ Network Error: {str(e)}")
                 self.send_json_response({'error': f'Network error: {str(e)}'}, 500)
 
         except Exception as e:
+            print(f"❌ Server Error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             self.send_json_response({'error': str(e)}, 500)
 
     def send_json_response(self, data, status_code):
