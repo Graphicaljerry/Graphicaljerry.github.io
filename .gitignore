@@ -1,0 +1,13 @@
+# Configuration files with API keys - DO NOT COMMIT
+config.php
+config_local.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Optional: Add other common files to ignore
+.DS_Store
+.env
+*.log
