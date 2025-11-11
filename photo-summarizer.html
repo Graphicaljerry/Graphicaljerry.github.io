@@ -44,63 +44,6 @@
             font-size: 1.1em;
         }
 
-        .api-key-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border-left: 4px solid #667eea;
-        }
-
-        .api-key-section h3 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
-
-        .api-key-section p {
-            color: #666;
-            margin-bottom: 15px;
-            font-size: 0.9em;
-            line-height: 1.5;
-        }
-
-        .api-key-section a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .api-key-section a:hover {
-            text-decoration: underline;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
 
         .upload-area {
             border: 3px dashed #667eea;
@@ -293,25 +236,12 @@
         <h1>AI Photo Summarizer</h1>
         <p class="subtitle">Upload your photos and get instant AI-powered descriptions</p>
 
-        <div class="api-key-section">
-            <h3>API Configuration</h3>
-            <p>This app uses OpenAI's Vision API to analyze photos. You'll need an OpenAI API key to use this feature.</p>
-            <p>Get your API key from: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></p>
-
-            <div class="input-group">
-                <label for="apiKey">OpenAI API Key</label>
-                <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
-            </div>
-        </div>
-
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📷</div>
             <div class="upload-text">Click to upload or drag and drop</div>
             <div class="upload-subtext">Supports: JPG, PNG, GIF, WebP</div>
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
-
-        <button class="btn" id="analyzeBtn" disabled>Analyze Photos</button>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
@@ -327,30 +257,10 @@
     <script>
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const apiKeyInput = document.getElementById('apiKey');
-        const analyzeBtn = document.getElementById('analyzeBtn');
         const loading = document.getElementById('loading');
         const error = document.getElementById('error');
         const success = document.getElementById('success');
         const previewSection = document.getElementById('previewSection');
-
-        let selectedFiles = [];
-
-        // Load saved API key from localStorage
-        const savedApiKey = localStorage.getItem('openai_api_key');
-        if (savedApiKey) {
-            apiKeyInput.value = savedApiKey;
-            checkReadyState();
-        }
-
-        // Save API key to localStorage when it changes
-        apiKeyInput.addEventListener('input', () => {
-            const apiKey = apiKeyInput.value.trim();
-            if (apiKey) {
-                localStorage.setItem('openai_api_key', apiKey);
-            }
-            checkReadyState();
-        });
 
         // Click to upload
         uploadArea.addEventListener('click', () => {
@@ -383,42 +293,17 @@
         function handleFiles(files) {
             if (files.length === 0) return;
 
-            selectedFiles = files;
-
             // Update upload area text
             const uploadText = uploadArea.querySelector('.upload-text');
             uploadText.textContent = `${files.length} photo${files.length > 1 ? 's' : ''} selected`;
 
-            checkReadyState();
-            showSuccess(`${files.length} photo${files.length > 1 ? 's' : ''} ready to analyze`);
+            // Automatically analyze the photos
+            analyzePhotos(files);
         }
 
-        function checkReadyState() {
-            const hasApiKey = apiKeyInput.value.trim().length > 0;
-            const hasFiles = selectedFiles.length > 0;
-            analyzeBtn.disabled = !(hasApiKey && hasFiles);
-        }
-
-        analyzeBtn.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-
-            if (!apiKey) {
-                showError('Please enter your OpenAI API key');
-                return;
-            }
-
-            if (selectedFiles.length === 0) {
-                showError('Please select at least one photo');
-                return;
-            }
-
-            await analyzePhotos(apiKey, selectedFiles);
-        });
-
-        async function analyzePhotos(apiKey, files) {
+        async function analyzePhotos(files) {
             hideMessages();
             loading.style.display = 'block';
-            analyzeBtn.disabled = true;
             previewSection.innerHTML = '';
             previewSection.style.display = 'none';
 
@@ -427,8 +312,8 @@
                     const file = files[i];
                     const base64Image = await fileToBase64(file);
 
-                    // Call OpenAI Vision API
-                    const summary = await getImageSummary(apiKey, base64Image);
+                    // Call PHP backend to analyze image
+                    const summary = await getImageSummary(base64Image);
 
                     // Display result
                     displayResult(file, summary);
@@ -440,11 +325,8 @@
 
             } catch (err) {
                 loading.style.display = 'none';
-                showError(err.message || 'Failed to analyze photos. Please check your API key and try again.');
+                showError(err.message || 'Failed to analyze photos. Please try again.');
                 console.error('Error:', err);
-            } finally {
-                analyzeBtn.disabled = false;
-                checkReadyState();
             }
         }
 
@@ -460,39 +342,20 @@
             });
         }
 
-        async function getImageSummary(apiKey, base64Image) {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        async function getImageSummary(base64Image) {
+            const response = await fetch('analyze-photo.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: [
-                        {
-                            role: 'user',
-                            content: [
-                                {
-                                    type: 'text',
-                                    text: 'Please provide a detailed description of this image. Include what you see, the setting, colors, mood, and any notable details.'
-                                },
-                                {
-                                    type: 'image_url',
-                                    image_url: {
-                                        url: `data:image/jpeg;base64,${base64Image}`
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    max_tokens: 500
+                    image: base64Image
                 })
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'API request failed');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to analyze photo');
             }
 
             const data = await response.json();

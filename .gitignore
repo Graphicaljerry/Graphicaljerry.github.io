@@ -1,0 +1,7 @@
+# Configuration file with API keys - DO NOT COMMIT
+config.php
+
+# Optional: Add other common files to ignore
+.DS_Store
+.env
+*.log
