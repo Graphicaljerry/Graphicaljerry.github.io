@@ -105,12 +105,18 @@ class PhotoHandler(http.server.SimpleHTTPRequestHandler):
 PORT = 8001
 Handler = PhotoHandler
 
-print(f"🚀 AI Photo Summarizer Server Starting...")
-print(f"📍 URL: http://localhost:{PORT}/photo-summarizer.html")
-print(f"🔑 API Key: Configured")
-print(f"\n✨ Upload a photo to test!\n")
+# Get local IP address for network access
+import socket
+local_ip = socket.gethostbyname(socket.gethostname())
 
-with socketserver.TCPServer(("", PORT), Handler) as httpd:
+print(f"🚀 AI Photo Summarizer Server Starting...")
+print(f"📍 Local URL: http://localhost:{PORT}/photo-summarizer.html")
+print(f"🌐 Network URL: http://{local_ip}:{PORT}/photo-summarizer.html")
+print(f"🔑 API Key: Configured")
+print(f"\n✨ Access from any device on your WiFi using the Network URL!")
+print(f"💡 On this computer, use either URL\n")
+
+with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as httpd:
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
